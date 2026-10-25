@@ -79,83 +79,102 @@
   </p>
 </main>
 
+
 <script>
-async function searchImages() {
-  const query = document.getElementById('query').value.trim();
-  const kind = document.getElementById('kind').value;
-  const status = document.getElementById('status');
-  const results = document.getElementById('results');
+const queryInput = document.getElementById('query');
+const kindSelect = document.getElementById('kind');
+const status = document.getElementById('status');
+const results = document.getElementById('results');
+
+function searchImages(term) {
+  const query = (term === undefined ? queryInput.value : term).trim();
 
   if (!query) {
-    status.textContent = 'Enter a topic or choose one of the shortcuts.';
+    status.textContent = 'Enter a topic or choose a shortcut.';
     return;
   }
 
-  const fullQuery = [query, kind].filter(Boolean).join(' ');
-  status.textContent = 'Searching the open-access medical image library…';
+  queryInput.value = query;
+  const fullQuery = [query, kindSelect.value]
+    .filter(Boolean).join(' ');
+  const q = encodeURIComponent(fullQuery);
+
   results.replaceChildren();
+  status.textContent = 'Choose a source to search for: ' + fullQuery;
 
-  try {
-    const url = 'https://openi.nlm.nih.gov/api/search?' +
-      new URLSearchParams({ query: fullQuery, m: '1', n: '20' });
+  const sources = [
+    {
+      title: 'Google Images',
+      description: 'Search medical images across the web.',
+      url: 'https://www.google.com/search?tbm=isch&q=' + q
+    },
+    {
+      title: 'Radiopaedia',
+      description: 'Radiology cases and teaching explanations.',
+      url: 'https://radiopaedia.org/search?lang=us&q=' + q
+    },
+    {
+      title: 'MedPix — medical cases',
+      description: 'Find medical teaching images through the NLM collection.',
+      url: 'https://www.google.com/search?q=' +
+        encodeURIComponent('site:medpix.nlm.nih.gov ' + fullQuery)
+    },
+    {
+      title: 'PubMed Central figures',
+      description: 'Search figures in free full-text medical articles.',
+      url: 'https://www.google.com/search?q=' +
+        encodeURIComponent(
+          'site:pmc.ncbi.nlm.nih.gov/articles ' + fullQuery
+        )
+    },
+    {
+      title: 'Open-i — NLM',
+      description: 'Try the original source again when it is available.',
+      url: 'https://openi.nlm.nih.gov/?query=' + q
+    }
+  ];
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Search unavailable');
+  sources.forEach(source => {
+    const card = document.createElement('article');
+    card.className = 'card';
 
-    const data = await response.json();
-    const items = data.list || data.images || data.results || [];
+    const title = document.createElement('h3');
+    title.textContent = source.title;
 
-    if (!items.length) throw new Error('No results');
+    const description = document.createElement('p');
+    description.textContent = source.description;
 
-    items.forEach(item => {
-      const imageUrl = item.image || item.image_url || item.imgLarge ||
-        item.imgSmall || item.fulltext_html_url;
-      if (!imageUrl || !/^https?:\/\//i.test(imageUrl)) return;
-
-      const card = document.createElement('article');
-      card.className = 'card';
-
-      const img = document.createElement('img');
-      img.src = imageUrl;
-      img.alt = item.caption || item.title || 'Medical image';
-      img.loading = 'lazy';
-      img.onerror = () => img.style.display = 'none';
-      card.appendChild(img);
-
-      const title = document.createElement('h3');
-      title.textContent = item.caption || item.title || 'Medical image';
-      card.appendChild(title);
-
-      const link = document.createElement('a');
-      link.href = item.fulltext_html_url || item.link || imageUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.textContent = 'Open original source';
-      card.appendChild(link);
-      results.appendChild(card);
-    });
-
-    if (!results.children.length) throw new Error('No displayable images');
-    status.textContent = 'Results for: ' + fullQuery;
-  } catch (error) {
-    status.textContent =
-      'The image API could not load inside the app. You can still search the medical image library directly:';
     const link = document.createElement('a');
-    link.href = 'https://openi.nlm.nih.gov/search?q=' + encodeURIComponent(fullQuery);
+    link.href = source.url;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
-    link.textContent = 'Search Open-i for "' + fullQuery + '"';
-    results.appendChild(link);
-  }
+    link.textContent = 'Open search';
+
+    card.append(title, description, link);
+    results.appendChild(card);
+  });
 }
 
-function quick(term) {
-  document.getElementById('query').value = term;
-  searchImages();
-}
+document.querySelector('.search button')
+  .addEventListener('click', () => searchImages());
 
-document.getElementById('query').addEventListener('keydown', event => {
+queryInput.addEventListener('keydown', event => {
   if (event.key === 'Enter') searchImages();
+});
+
+document.querySelectorAll('.chips button').forEach(button => {
+  button.addEventListener('click', () => {
+    const term = button.textContent === 'Chest X-rays'
+      ? 'chest X-ray'
+      : button.textContent === 'Fractures'
+      ? 'bone fracture X-ray'
+      : button.textContent === 'CT brain'
+      ? 'CT brain'
+      : button.textContent === 'Brain MRI'
+      ? 'brain MRI'
+      : button.textContent;
+    searchImages(term);
+  });
 });
 </script>
 </body>
