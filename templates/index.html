@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RadFind | Medical Imaging</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+      background: #f4f7fb;
+      color: #172033;
+    }
+    header { text-align: center; padding: 24px 0; }
+    h1 { color: #176b87; font-size: 38px; }
+    form { display: flex; gap: 8px; }
+    input {
+      flex: 1; min-width: 0; padding: 14px;
+      border: 1px solid #ccd5e0; border-radius: 10px;
+      font-size: 16px;
+    }
+    button {
+      padding: 14px; border: 0; border-radius: 10px;
+      background: #176b87; color: white; font-weight: bold;
+    }
+    .panel {
+      background: white; padding: 18px; margin: 18px 0;
+      border-radius: 14px; overflow-wrap: anywhere;
+    }
+    a { color: #176b87; }
+    img { max-width: 100%; height: auto; border-radius: 8px; }
+    @media (max-width: 500px) {
+      form { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>RadFind</h1>
+    <p>Explore real medical images for learning radiology.</p>
+  </header>
+
+  <div class="panel">
+    <form action="/" method="get">
+      <input name="q" value="{{ query }}"
+        placeholder="Try pneumothorax, pleural effusion, or fracture..."
+        required>
+      <button type="submit">Search images</button>
+    </form>
+    <p>Search medical imaging topics, including X-rays and CT.</p>
+  </div>
+
+  {% if error %}
+    <div class="panel">
+      <strong>Search problem</strong>
+      <p>{{ error }}</p>
+      <p><a href="https://openi.nlm.nih.gov/" target="_blank">Search the Open-i medical image library</a></p>
+    </div>
+  {% endif %}
+
+  {% if query and not error and not results %}
+    <div class="panel">
+      No images were returned. The image service may need further configuration.
+      <p><a href="https://openi.nlm.nih.gov/search?query={{ query|urlencode }}"
+        target="_blank">Try this search directly on Open-i</a></p>
+    </div>
+  {% endif %}
+
+  {% for item in results %}
+    <div class="panel">
+      {% set image_url = item.get('imgLarge') or item.get('image_url') or item.get('imageUrl') or item.get('imgThumb') %}
+      {% set caption = item.get('caption') or item.get('title') or item.get('figure') or 'Medical image' %}
+      {% if image_url %}
+        <img src="{{ image_url }}" alt="{{ caption }}" loading="lazy">
+      {% endif %}
+      <p>{{ caption }}</p>
+      {% if item.get('pmcid') %}
+        <a href="https://pmc.ncbi.nlm.nih.gov/articles/{{ item.get('pmcid') }}/"
+          target="_blank">View source article</a>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <footer>
+    <p>For medical education only. Verify findings with trusted clinical references.</p>
+  </footer>
+</body>
+</html>
